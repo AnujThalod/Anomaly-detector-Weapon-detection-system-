@@ -1,32 +1,19 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
+
+# ffmpeg install karo video processing ke liye
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libsm6 \
-    libxext6 \
-    libgl1 \
-    libglib2.0-0 \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first for better caching
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Python dependencies
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p static/uploads static/processed
-
-# Expose port
 EXPOSE 10000
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--timeout", "120", "--workers", "1", "app:app"]
+CMD ["python", "app.py"]

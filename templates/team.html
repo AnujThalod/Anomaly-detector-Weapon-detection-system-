@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team — WeaponScan AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red: #e8000f;
+            --bg: #04060a;
+            --bg2: #080c12;
+            --border: #ffffff0d;
+            --border2: #ffffff18;
+            --text: #c8d0dc;
+            --text2: #6b7585;
+            --mono: 'Share Tech Mono', monospace;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Grid background */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(#ffffff04 1px, transparent 1px),
+                linear-gradient(90deg, #ffffff04 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0; pointer-events: none;
+        }
+
+        /* Red glow top */
+        .glow {
+            position: fixed;
+            width: 600px; height: 400px;
+            background: radial-gradient(ellipse, #e8000f0f 0%, transparent 70%);
+            top: -100px; left: 50%; transform: translateX(-50%);
+            z-index: 0; pointer-events: none;
+        }
+
+        /* NAV */
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 3rem; height: 64px;
+            border-bottom: 1px solid var(--border);
+            background: #04060aee; backdrop-filter: blur(20px);
+        }
+
+        .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .nav-icon { width: 30px; height: 30px; border: 1px solid var(--red); display: grid; place-items: center; }
+        .nav-icon::before { content: ''; width: 10px; height: 10px; background: var(--red); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+        .nav-logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 5px; color: #fff; }
+        .nav-logo-text span { color: var(--red); }
+
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-link {
+            font-family: var(--mono); font-size: 0.62rem; letter-spacing: 2px;
+            color: var(--text2); text-decoration: none;
+            border: 1px solid transparent; padding: 5px 14px;
+            transition: all 0.2s;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--text); border-color: var(--border2); }
+        .nav-link.active { color: var(--red); border-color: #e8000f33; }
+
+        /* MAIN */
+        .main {
+            position: relative; z-index: 1;
+            max-width: 900px; margin: 0 auto;
+            padding: 4rem 2rem 6rem;
+        }
+
+        /* HEADER */
+        .page-tag { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 4px; color: var(--text2); margin-bottom: 0.4rem; }
+        .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; letter-spacing: 4px; color: #fff; margin-bottom: 0.3rem; }
+        .page-title span { color: var(--red); }
+        .page-sub { font-size: 0.85rem; letter-spacing: 1px; color: var(--text2); margin-bottom: 3.5rem; }
+
+        /* TEAM CARDS */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s, transform 0.3s;
+        }
+
+        .card:hover { border-color: #ffffff22; transform: translateY(-4px); }
+
+        /* Top accent line */
+        .card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: var(--red);
+            box-shadow: 0 0 12px var(--red);
+        }
+
+        /* Corner brackets */
+        .card-corner { position: absolute; width: 16px; height: 16px; }
+        .card-corner::before, .card-corner::after { content: ''; position: absolute; background: var(--red); opacity: 0.4; }
+        .card-corner::before { width: 100%; height: 1.5px; top: 0; }
+        .card-corner::after { width: 1.5px; height: 100%; top: 0; }
+        .card-corner.tl { bottom: 8px; left: 8px; transform: scale(-1); }
+        .card-corner.tr { bottom: 8px; right: 8px; transform: scaleX(-1) scaleY(-1); }
+
+        .card-body { padding: 2.5rem 2rem 2rem; }
+
+        /* Avatar */
+        .avatar-wrap {
+            width: 90px; height: 90px;
+            border: 2px solid var(--red);
+            margin: 0 auto 1.5rem;
+            position: relative;
+            display: grid; place-items: center;
+        }
+
+        .avatar-wrap::before {
+            content: '';
+            position: absolute; inset: 4px;
+            background: #e8000f15;
+        }
+
+        .avatar-initials {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5rem;
+            letter-spacing: 3px;
+            color: var(--red);
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 0 20px #e8000f55;
+        }
+
+        /* Scan line on avatar */
+        .avatar-wrap::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--red), transparent);
+            animation: avatarScan 3s ease-in-out infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes avatarScan {
+            0% { top: 0; } 100% { top: 100%; }
+        }
+
+        .member-id {
+            font-family: var(--mono); font-size: 0.6rem;
+            letter-spacing: 3px; color: var(--red);
+            text-align: center; margin-bottom: 0.5rem;
+        }
+
+        .member-name {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem; letter-spacing: 5px;
+            color: #fff; text-align: center;
+            margin-bottom: 0.3rem;
+        }
+
+        .member-tag {
+            font-family: var(--mono); font-size: 0.62rem;
+            letter-spacing: 2px; color: var(--text2);
+            text-align: center; margin-bottom: 1.5rem;
+        }
+
+        /* Divider */
+        .card-divider { height: 1px; background: var(--border); margin-bottom: 1.5rem; }
+
+        /* Stats row */
+        .member-stats {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 1px; background: var(--border);
+        }
+
+        .stat-cell {
+            background: var(--bg2);
+            padding: 0.8rem 1rem; text-align: center;
+        }
+
+        .stat-val {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem; letter-spacing: 2px; color: var(--red);
+        }
+
+        .stat-key {
+            font-family: var(--mono); font-size: 0.55rem;
+            letter-spacing: 1px; color: var(--text2);
+            margin-top: 2px;
+        }
+
+        /* PROJECT SECTION */
+        .project-section {
+            border: 1px solid var(--border);
+            background: var(--bg2);
+            overflow: hidden;
+        }
+
+        .section-head {
+            display: flex; align-items: center; gap: 10px;
+            padding: 0.9rem 1.4rem;
+            border-bottom: 1px solid var(--border);
+            background: #ffffff04;
+        }
+
+        .s-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--red); }
+        .s-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 2px; color: var(--text2); }
+
+        .section-body { padding: 2rem; }
+
+        .project-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1px; background: var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .proj-cell {
+            background: var(--bg2); padding: 1.2rem;
+            transition: background 0.2s;
+        }
+        .proj-cell:hover { background: var(--bg); }
+
+        .proj-key { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 2px; color: var(--text2); margin-bottom: 0.4rem; }
+        .proj-val { font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; color: #fff; letter-spacing: 1px; }
+
+        .tech-stack {
+            display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem;
+        }
+
+        .tech-badge {
+            font-family: var(--mono); font-size: 0.62rem; letter-spacing: 1px;
+            padding: 5px 12px; border: 1px solid var(--border2);
+            color: var(--text2); transition: all 0.2s;
+        }
+
+        .tech-badge:hover { border-color: var(--red); color: var(--red); }
+        .tech-badge.highlight { border-color: #e8000f44; color: var(--red); background: #e8000f08; }
+
+        /* FOOTER */
+        footer {
+            position: relative; z-index: 1;
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 3rem;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 4px; color: var(--text2); }
+        .footer-logo span { color: var(--red); }
+        .footer-text { font-family: var(--mono); font-size: 0.58rem; color: var(--text2); letter-spacing: 2px; }
+
+        @media (max-width: 650px) {
+            .team-grid { grid-template-columns: 1fr; }
+            .project-grid { grid-template-columns: repeat(2, 1fr); }
+            nav { padding: 0 1.2rem; }
+            .nav-links { gap: 0.8rem; }
+            footer { flex-direction: column; gap: 0.8rem; text-align: center; padding: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<!-- NAV -->
+<nav>
+    <a href="{{ url_for('home') }}" class="nav-logo">
+        <div class="nav-icon"></div>
+        <div class="nav-logo-text">Weapon<span>Scan</span></div>
+    </a>
+    <div class="nav-links">
+        <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+        <a href="{{ url_for('detector') }}" class="nav-link">Scanner</a>
+        <a href="{{ url_for('team') }}" class="nav-link active">Team</a>
+    </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+    <div class="page-tag">// UNIT OPERATORS</div>
+    <div class="page-title">MEET THE <span>TEAM</span></div>
+    <div class="page-sub">The minds behind WeaponScan AI</div>
+
+    <!-- TEAM CARDS -->
+    <div class="team-grid">
+
+        <!-- VIJAY -->
+        <div class="card">
+            <div class="card-corner tl"></div>
+            <div class="card-corner tr"></div>
+            <div class="card-body">
+                <div class="avatar-wrap">
+                    <div class="avatar-initials">V</div>
+                </div>
+                <div class="member-id">// OPERATOR_01</div>
+                <div class="member-name">VIJAY</div>
+                <div class="member-tag">WeaponScan AI · Developer</div>
+                <div class="card-divider"></div>
+                <div class="member-stats">
+                    <div class="stat-cell">
+                        <div class="stat-val">AI</div>
+                        <div class="stat-key">CORE DOMAIN</div>
+                    </div>
+                    <div class="stat-cell">
+                        <div class="stat-val">YOLO</div>
+                        <div class="stat-key">PRIMARY TOOL</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VANSH -->
+        <div class="card">
+            <div class="card-corner tl"></div>
+            <div class="card-corner tr"></div>
+            <div class="card-body">
+                <div class="avatar-wrap">
+                    <div class="avatar-initials">V</div>
+                </div>
+                <div class="member-id">// OPERATOR_02</div>
+                <div class="member-name">VANSH</div>
+                <div class="member-tag">WeaponScan AI · Developer</div>
+                <div class="card-divider"></div>
+                <div class="member-stats">
+                    <div class="stat-cell">
+                        <div class="stat-val">WEB</div>
+                        <div class="stat-key">CORE DOMAIN</div>
+                    </div>
+                    <div class="stat-cell">
+                        <div class="stat-val">FLASK</div>
+                        <div class="stat-key">PRIMARY TOOL</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PROJECT INFO -->
+    <div class="project-section">
+        <div class="section-head">
+            <div class="s-dot"></div>
+            <div class="s-label">PROJECT OVERVIEW</div>
+        </div>
+        <div class="section-body">
+            <div class="project-grid">
+                <div class="proj-cell">
+                    <div class="proj-key">// PROJECT</div>
+                    <div class="proj-val">WeaponScan AI</div>
+                </div>
+                <div class="proj-cell">
+                    <div class="proj-key">// TYPE</div>
+                    <div class="proj-val">Web Application</div>
+                </div>
+                <div class="proj-cell">
+                    <div class="proj-key">// DOMAIN</div>
+                    <div class="proj-val">Computer Vision</div>
+                </div>
+                <div class="proj-cell">
+                    <div class="proj-key">// MODEL</div>
+                    <div class="proj-val">YOLOv8</div>
+                </div>
+                <div class="proj-cell">
+                    <div class="proj-key">// BACKEND</div>
+                    <div class="proj-val">Python + Flask</div>
+                </div>
+                <div class="proj-cell">
+                    <div class="proj-key">// STATUS</div>
+                    <div class="proj-val" style="color: #00e676;">Active ●</div>
+                </div>
+            </div>
+
+            <div class="proj-key" style="margin-top: 1.5rem; margin-bottom: 0.8rem;">// TECH STACK</div>
+            <div class="tech-stack">
+                <div class="tech-badge highlight">Python</div>
+                <div class="tech-badge highlight">YOLOv8</div>
+                <div class="tech-badge highlight">Flask</div>
+                <div class="tech-badge">OpenCV</div>
+                <div class="tech-badge">FFmpeg</div>
+                <div class="tech-badge">PyTorch</div>
+                <div class="tech-badge">HTML5</div>
+                <div class="tech-badge">CSS3</div>
+                <div class="tech-badge">JavaScript</div>
+                <div class="tech-badge">Docker</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <div class="footer-logo">Weapon<span>Scan</span> AI</div>
+    <div class="footer-text">// VIJAY & VANSH · 2026</div>
+</footer>
+
+</body>
+</html>

@@ -4,8 +4,3 @@ services:
     env: docker
     plan: free
     autoDeploy: true
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /
-    envVars:
-      - key: FLASK_DEBUG
-        value: false

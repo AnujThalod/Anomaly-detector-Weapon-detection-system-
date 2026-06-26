@@ -3,71 +3,395 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anomaly Detector</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Scanner — WeaponScan AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red: #e8000f;
+            --bg: #04060a;
+            --bg2: #080c12;
+            --bg3: #0c1018;
+            --border: #ffffff0d;
+            --border2: #ffffff18;
+            --text: #c8d0dc;
+            --text2: #6b7585;
+            --green: #00e676;
+            --mono: 'Share Tech Mono', monospace;
+        }
+
+        html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; overflow-x: hidden; }
+
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background-image: linear-gradient(#ffffff04 1px, transparent 1px), linear-gradient(90deg, #ffffff04 1px, transparent 1px);
+            background-size: 60px 60px; z-index: 0; pointer-events: none;
+        }
+
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 3rem; height: 64px;
+            border-bottom: 1px solid var(--border);
+            background: #04060aee; backdrop-filter: blur(20px);
+        }
+
+        .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .nav-icon { width: 30px; height: 30px; border: 1px solid var(--red); display: grid; place-items: center; }
+        .nav-icon::before { content: ''; width: 10px; height: 10px; background: var(--red); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+        .nav-logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 5px; color: #fff; }
+        .nav-logo-text span { color: var(--red); }
+
+        .nav-back {
+            font-family: var(--mono); font-size: 0.62rem; letter-spacing: 2px;
+            color: var(--text2); border: 1px solid var(--border2); padding: 5px 14px;
+            text-decoration: none; transition: all 0.2s;
+        }
+        .nav-back:hover { color: var(--text); border-color: #ffffff30; }
+
+        .main { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 3.5rem 2rem 5rem; }
+
+        /* PAGE HEADER */
+        .page-header { margin-bottom: 2.5rem; }
+        .page-tag { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 3px; color: var(--text2); margin-bottom: 0.4rem; }
+        .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; letter-spacing: 4px; color: #fff; }
+        .page-title span { color: var(--red); }
+
+        /* UPLOAD ZONE */
+        .upload-zone {
+            border: 1px dashed #ffffff18;
+            background: var(--bg2);
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at center, #e8000f08 0%, transparent 70%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--red); }
+        .upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+
+        /* Corner brackets */
+        .z-corner { position: absolute; width: 18px; height: 18px; }
+        .z-corner::before, .z-corner::after { content: ''; position: absolute; background: var(--red); opacity: 0.5; }
+        .z-corner::before { width: 100%; height: 1.5px; top: 0; }
+        .z-corner::after { width: 1.5px; height: 100%; top: 0; }
+        .z-corner.tl { top: 8px; left: 8px; }
+        .z-corner.tr { top: 8px; right: 8px; transform: scaleX(-1); }
+        .z-corner.bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+        .z-corner.br { bottom: 8px; right: 8px; transform: scale(-1); }
+
+        .upload-icon-wrap {
+            width: 64px; height: 64px; border: 1px solid var(--border2);
+            display: grid; place-items: center;
+            margin: 0 auto 1.5rem; font-size: 1.6rem;
+            transition: border-color 0.3s;
+        }
+        .upload-zone:hover .upload-icon-wrap { border-color: var(--red); }
+
+        .upload-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 4px; color: #fff; margin-bottom: 0.5rem; }
+        .upload-sub { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 2px; color: var(--text2); }
+        .upload-sub strong { color: var(--red); }
+
+        .file-selected {
+            margin-top: 1.2rem; display: none;
+            font-family: var(--mono); font-size: 0.68rem; letter-spacing: 1px;
+            color: var(--green); background: #00e67610; border: 1px solid #00e67620;
+            padding: 6px 16px; display: none; align-items: center; justify-content: center; gap: 8px;
+        }
+        .file-selected.show { display: flex; }
+
+        #fileInput { display: none; }
+
+        /* SCAN BUTTON */
+        .scan-btn {
+            width: 100%; padding: 1.2rem;
+            font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 6px;
+            color: #fff; background: var(--red); border: none; cursor: pointer;
+            position: relative; overflow: hidden; transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+        .scan-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, #ffffff25, transparent);
+            transition: left 0.5s ease;
+        }
+        .scan-btn:hover:not(:disabled) { box-shadow: 0 15px 50px #e8000f44; transform: translateY(-2px); }
+        .scan-btn:hover:not(:disabled)::before { left: 100%; }
+        .scan-btn:disabled { background: #1a0408; color: #3a1015; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* PROGRESS */
+        .progress-wrap { display: none; margin-bottom: 2rem; }
+        .progress-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .progress-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 2px; color: var(--text2); }
+        .progress-pct { font-family: var(--mono); font-size: 0.62rem; color: var(--red); }
+        .progress-bar { height: 2px; background: var(--border2); position: relative; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--red); box-shadow: 0 0 8px var(--red); animation: progress 2s ease-in-out infinite; width: 35%; }
+        @keyframes progress { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+
+        /* TERMINAL LOG */
+        .terminal {
+            display: none;
+            background: var(--bg2); border: 1px solid var(--border);
+            padding: 1rem 1.2rem; margin-bottom: 1.5rem;
+            font-family: var(--mono); font-size: 0.65rem; line-height: 1.9; color: var(--text2);
+        }
+        .terminal .t-red { color: var(--red); }
+        .terminal .t-green { color: var(--green); }
+
+        /* OUTPUT */
+        #output { width: 100%; }
+
+        .result-panel { border: 1px solid var(--border); background: var(--bg2); overflow: hidden; animation: fadeUp 0.5s ease both; }
+
+        .result-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.9rem 1.4rem; border-bottom: 1px solid var(--border);
+            background: #ffffff04;
+        }
+        .result-header-left { display: flex; align-items: center; gap: 10px; }
+        .r-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .r-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 2px; color: var(--text2); }
+
+        .result-body { padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+
+        .result-body img, .result-body video {
+            max-width: 100%; display: block;
+            border: 1px solid var(--border2);
+        }
+
+        .result-actions { display: flex; gap: 1rem; }
+
+        .dl-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 0.7rem 2rem;
+            font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 3px;
+            color: var(--text); border: 1px solid var(--border2); text-decoration: none;
+            transition: all 0.2s;
+        }
+        .dl-btn:hover { border-color: var(--red); color: var(--red); background: #e8000f0a; }
+
+        .scan-again-btn {
+            padding: 0.7rem 2rem;
+            font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 3px;
+            color: var(--text2); border: 1px solid var(--border); background: none; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .scan-again-btn:hover { color: var(--text); border-color: var(--border2); }
+
+        .error-box {
+            border: 1px solid #e8000f33; background: #e8000f0a;
+            padding: 1.5rem; text-align: center;
+            font-family: var(--mono); font-size: 0.72rem; letter-spacing: 1px; color: var(--red);
+            animation: fadeUp 0.4s ease both;
+        }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 600px) {
+            nav { padding: 0 1.2rem; }
+            .main { padding: 2rem 1.2rem 4rem; }
+            .result-actions { flex-direction: column; width: 100%; }
+            .dl-btn, .scan-again-btn { text-align: center; justify-content: center; }
+        }
+    </style>
 </head>
-<body class="detector">
-    <div class="container">
-        <h1>🔍 Anomaly Detector</h1>
-        <input type="file" id="fileInput" class="file-input" accept="image/*,video/*">
-        <button onclick="uploadFile()" class="detect-btn">Detect Anomalies</button>
-        <div id="output"></div>
+<body>
+
+<nav>
+    <a href="{{ url_for('home') }}" class="nav-logo">
+        <div class="nav-icon"></div>
+        <div class="nav-logo-text">Weapon<span>Scan</span></div>
+    </a>
+    <a href="{{ url_for('home') }}" class="nav-back">← HOME</a>
+</nav>
+
+<div class="main">
+    <div class="page-header">
+        <div class="page-tag">// SCAN MODULE ACTIVE</div>
+        <div class="page-title">THREAT <span>SCANNER</span></div>
     </div>
 
-    <script>
-        function uploadFile() {
-            const input = document.getElementById('fileInput');
-            const output = document.getElementById('output');
-            const button = document.querySelector('.detect-btn');
-            
-            if (input.files.length === 0) {
-                output.innerHTML = "<p>Please select an image or video.</p>";
+    <!-- UPLOAD -->
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="z-corner tl"></div><div class="z-corner tr"></div>
+        <div class="z-corner bl"></div><div class="z-corner br"></div>
+
+        <div class="upload-icon-wrap">📁</div>
+        <div class="upload-title">Drop File Here</div>
+        <div class="upload-sub">Click to browse &nbsp;·&nbsp; <strong>JPG PNG MP4 AVI MOV MKV</strong></div>
+    </div>
+
+    <div class="file-selected" id="fileSelected">
+        <span style="color:var(--green)">✓</span>
+        <span id="fileName">file.mp4</span>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*,video/*">
+
+    <button class="scan-btn" id="scanBtn" onclick="uploadFile()" disabled>
+        Run Scan
+    </button>
+
+    <!-- PROGRESS -->
+    <div class="progress-wrap" id="progressWrap">
+        <div class="progress-top">
+            <div class="progress-label">PROCESSING FILE</div>
+            <div class="progress-pct" id="progressTxt">SCANNING...</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="terminal" id="terminal">
+        <div><span class="t-red">[SYS]</span> File received — initializing YOLO model...</div>
+        <div><span class="t-red">[SYS]</span> Running threat detection on input...</div>
+        <div id="terminalExtra"></div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div id="output"></div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const scanBtn = document.getElementById('scanBtn');
+    const dropZone = document.getElementById('dropZone');
+    const fileSelected = document.getElementById('fileSelected');
+    const fileName = document.getElementById('fileName');
+    const progressWrap = document.getElementById('progressWrap');
+    const terminal = document.getElementById('terminal');
+    const terminalExtra = document.getElementById('terminalExtra');
+    const output = document.getElementById('output');
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const f = fileInput.files[0];
+            fileName.textContent = f.name;
+            fileSelected.classList.add('show');
+            scanBtn.disabled = false;
+        }
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            const f = e.dataTransfer.files[0];
+            fileName.textContent = f.name;
+            fileSelected.classList.add('show');
+            scanBtn.disabled = false;
+        }
+    });
+
+    function uploadFile() {
+        if (!fileInput.files.length) return;
+
+        const file = fileInput.files[0];
+        const isVideo = file.type.startsWith('video');
+        const formData = new FormData();
+        formData.append('file', file);
+
+        scanBtn.disabled = true;
+        scanBtn.textContent = 'Scanning...';
+        progressWrap.style.display = 'block';
+        terminal.style.display = 'block';
+        terminalExtra.innerHTML = '';
+        output.innerHTML = '';
+
+        if (isVideo) {
+            terminalExtra.innerHTML = '<div><span class="t-red">[SYS]</span> Video detected — processing frame by frame...</div>';
+        } else {
+            terminalExtra.innerHTML = '<div><span class="t-red">[SYS]</span> Image detected — running single-pass detection...</div>';
+        }
+
+        fetch('/detect', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            scanBtn.disabled = false;
+            scanBtn.textContent = 'Run Scan';
+            progressWrap.style.display = 'none';
+
+            if (data.error) {
+                terminal.style.display = 'none';
+                output.innerHTML = `<div class="error-box">⚠ ERROR: ${data.error}</div>`;
                 return;
             }
 
-            const file = input.files[0];
-            const formData = new FormData();
-            formData.append('file', file);
+            terminalExtra.innerHTML += `<div><span class="t-green">[OK]</span> Detection complete — rendering output...</div>`;
 
-            output.innerHTML = "<p>Processing...</p>";
-            button.disabled = true;
-            button.textContent = "Processing...";
+            setTimeout(() => {
+                terminal.style.display = 'none';
 
-            fetch('/detect', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                button.disabled = false;
-                button.textContent = "Detect Anomalies";
-
-                if (data.path && data.type === 'image') {
+                if (data.type === 'image') {
                     output.innerHTML = `
-                        <h3>Detected Anomalies (Image):</h3>
-                        <img src="${data.path}" alt="Processed Image" width="500">
-                        <p><a href="${data.path}" download>Download Processed Image</a></p>
-                    `;
-                } else if (data.path && data.type === 'video') {
-                     output.innerHTML = `
-                        <h3>Detected Anomalies (Video):</h3>
-                        <video width="500" controls>
-                            <source src="${data.path}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-                        <p><a href="${data.path}" download>Download Processed Video</a></p>
-                    `;
-                } else {
-                    output.innerHTML = "<p>Error detecting anomalies.</p>";
+                        <div class="result-panel">
+                            <div class="result-header">
+                                <div class="result-header-left">
+                                    <div class="r-dot"></div>
+                                    <div class="r-label">DETECTION COMPLETE &nbsp;·&nbsp; IMAGE</div>
+                                </div>
+                            </div>
+                            <div class="result-body">
+                                <img src="${data.path}" alt="Detection Result">
+                                <div class="result-actions">
+                                    <a href="${data.path}" download class="dl-btn">↓ Download Result</a>
+                                    <button class="scan-again-btn" onclick="resetScanner()">Scan Another</button>
+                                </div>
+                            </div>
+                        </div>`;
+                } else if (data.type === 'video') {
+                    output.innerHTML = `
+                        <div class="result-panel">
+                            <div class="result-header">
+                                <div class="result-header-left">
+                                    <div class="r-dot"></div>
+                                    <div class="r-label">DETECTION COMPLETE &nbsp;·&nbsp; VIDEO</div>
+                                </div>
+                            </div>
+                            <div class="result-body">
+                                <video controls>
+                                    <source src="${data.path}" type="video/mp4">
+                                </video>
+                                <div class="result-actions">
+                                    <a href="${data.path}" download class="dl-btn">↓ Download Result</a>
+                                    <button class="scan-again-btn" onclick="resetScanner()">Scan Another</button>
+                                </div>
+                            </div>
+                        </div>`;
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                output.innerHTML = "<p>Failed to process file.</p>";
-                button.disabled = false;
-                button.textContent = "Detect Anomalies";
-            });
-        }
-    </script>
+            }, 600);
+        })
+        .catch(() => {
+            scanBtn.disabled = false;
+            scanBtn.textContent = 'Run Scan';
+            progressWrap.style.display = 'none';
+            terminal.style.display = 'none';
+            output.innerHTML = `<div class="error-box">⚠ CONNECTION FAILED — Please try again.</div>`;
+        });
+    }
+
+    function resetScanner() {
+        output.innerHTML = '';
+        fileSelected.classList.remove('show');
+        fileInput.value = '';
+        scanBtn.disabled = true;
+        scanBtn.textContent = 'Run Scan';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+
 </body>
 </html>

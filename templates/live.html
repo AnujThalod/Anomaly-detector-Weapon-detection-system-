@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Scanner — WeaponScan AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red: #e8000f;
+            --bg: #04060a;
+            --bg2: #080c12;
+            --bg3: #0c1018;
+            --border: #ffffff0d;
+            --border2: #ffffff18;
+            --text: #c8d0dc;
+            --text2: #6b7585;
+            --green: #00e676;
+            --mono: 'Share Tech Mono', monospace;
+        }
+
+        body { background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background-image: linear-gradient(#ffffff04 1px, transparent 1px), linear-gradient(90deg, #ffffff04 1px, transparent 1px);
+            background-size: 60px 60px; z-index: 0; pointer-events: none;
+        }
+
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 3rem; height: 64px;
+            border-bottom: 1px solid var(--border);
+            background: #04060aee; backdrop-filter: blur(20px);
+        }
+
+        .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .nav-icon { width: 30px; height: 30px; border: 1px solid var(--red); display: grid; place-items: center; }
+        .nav-icon::before { content: ''; width: 10px; height: 10px; background: var(--red); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+        .nav-logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 5px; color: #fff; }
+        .nav-logo-text span { color: var(--red); }
+
+        .nav-links { display: flex; gap: 1rem; }
+        .nav-link { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 2px; color: var(--text2); text-decoration: none; border: 1px solid transparent; padding: 5px 14px; transition: all 0.2s; }
+        .nav-link:hover { color: var(--text); border-color: var(--border2); }
+        .nav-link.active { color: var(--red); border-color: #e8000f33; }
+
+        .main { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+
+        .page-tag { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 4px; color: var(--text2); margin-bottom: 0.4rem; }
+        .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; letter-spacing: 4px; color: #fff; margin-bottom: 0.3rem; }
+        .page-title span { color: var(--red); }
+        .page-sub { font-size: 0.85rem; letter-spacing: 1px; color: var(--text2); margin-bottom: 2rem; }
+
+        /* MODE SELECTOR */
+        .mode-selector { display: flex; gap: 1px; background: var(--border); margin-bottom: 2rem; }
+        .mode-btn {
+            flex: 1; padding: 0.9rem;
+            font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 3px;
+            color: var(--text2); background: var(--bg2); border: none; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn.active { background: var(--red); color: #fff; }
+        .mode-btn:hover:not(.active) { background: var(--bg3); color: var(--text); }
+
+        /* CAMERA PANEL */
+        .camera-panel { display: none; }
+        .camera-panel.show { display: block; }
+
+        .video-wrap {
+            position: relative;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .video-wrap video, .video-wrap canvas {
+            width: 100%; display: block;
+        }
+
+        /* Canvas overlays on video */
+        .video-wrap canvas {
+            position: absolute; top: 0; left: 0; height: 100%;
+        }
+
+        /* Scan overlay corners */
+        .v-corner { position: absolute; width: 24px; height: 24px; z-index: 10; }
+        .v-corner::before, .v-corner::after { content: ''; position: absolute; background: var(--red); }
+        .v-corner::before { width: 100%; height: 2px; top: 0; }
+        .v-corner::after { width: 2px; height: 100%; top: 0; }
+        .v-corner.tl { top: 10px; left: 10px; }
+        .v-corner.tr { top: 10px; right: 10px; transform: scaleX(-1); }
+        .v-corner.bl { bottom: 10px; left: 10px; transform: scaleY(-1); }
+        .v-corner.br { bottom: 10px; right: 10px; transform: scale(-1); }
+
+        /* Scan beam */
+        .scan-beam {
+            position: absolute; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--red), transparent);
+            box-shadow: 0 0 10px var(--red);
+            z-index: 5; display: none;
+            animation: scanBeam 2s linear infinite;
+        }
+        .scan-beam.active { display: block; }
+        @keyframes scanBeam { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* Status bar */
+        .status-bar {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: #04060acc; backdrop-filter: blur(10px);
+            padding: 0.6rem 1rem;
+            display: flex; align-items: center; justify-content: space-between;
+            z-index: 10;
+        }
+
+        .status-left { display: flex; align-items: center; gap: 10px; }
+        .status-led { width: 8px; height: 8px; border-radius: 50%; background: var(--text2); }
+        .status-led.live { background: var(--red); box-shadow: 0 0 8px var(--red); animation: blink 1s ease-in-out infinite; }
+        .status-led.detecting { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .status-text { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 2px; color: var(--text2); }
+        .status-fps { font-family: var(--mono); font-size: 0.65rem; color: var(--text2); }
+
+        /* Detection counter */
+        .detect-count {
+            font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem;
+            letter-spacing: 2px; color: var(--red);
+        }
+
+        /* Controls */
+        .controls { display: flex; gap: 1rem; margin-bottom: 2rem; }
+
+        .ctrl-btn {
+            flex: 1; padding: 1rem;
+            font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 4px;
+            color: #fff; border: none; cursor: pointer; transition: all 0.25s;
+        }
+
+        .btn-start { background: var(--red); }
+        .btn-start:hover { box-shadow: 0 8px 30px #e8000f44; transform: translateY(-2px); }
+        .btn-stop { background: var(--bg2); border: 1px solid var(--border2); color: var(--text2); }
+        .btn-stop:hover { border-color: var(--red); color: var(--red); }
+        .btn-stop:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .btn-start:disabled { background: #1a0408; color: #3a1015; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* IP Camera input */
+        .ip-input-wrap {
+            background: var(--bg2); border: 1px solid var(--border);
+            padding: 1.5rem; margin-bottom: 1.5rem;
+        }
+
+        .ip-label { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 2px; color: var(--text2); margin-bottom: 0.6rem; }
+
+        .ip-row { display: flex; gap: 1rem; }
+
+        .ip-input {
+            flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+            color: var(--text); font-family: var(--mono); font-size: 0.85rem;
+            padding: 0.7rem 1rem; outline: none;
+            transition: border-color 0.2s;
+        }
+        .ip-input:focus { border-color: var(--red); }
+        .ip-input::placeholder { color: var(--text2); }
+
+        .ip-connect-btn {
+            padding: 0.7rem 2rem;
+            font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 3px;
+            color: #fff; background: var(--red); border: none; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ip-connect-btn:hover { box-shadow: 0 6px 20px #e8000f44; }
+
+        /* Detection log */
+        .det-log {
+            background: var(--bg2); border: 1px solid var(--border);
+            padding: 1rem 1.2rem; max-height: 180px; overflow-y: auto;
+        }
+
+        .log-header { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 3px; color: var(--text2); margin-bottom: 0.8rem; }
+
+        .log-entry { display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem; }
+        .log-time { font-family: var(--mono); font-size: 0.6rem; color: var(--text2); min-width: 65px; }
+        .log-badge { font-family: var(--mono); font-size: 0.6rem; padding: 2px 8px; background: #e8000f22; border: 1px solid #e8000f44; color: var(--red); }
+        .log-conf { font-family: var(--mono); font-size: 0.6rem; color: var(--text2); }
+
+        .no-log { font-family: var(--mono); font-size: 0.65rem; color: var(--text2); text-align: center; padding: 1rem; }
+
+        /* Error box */
+        .error-box { background: #e8000f0a; border: 1px solid #e8000f33; padding: 1rem; font-family: var(--mono); font-size: 0.72rem; color: var(--red); margin-bottom: 1rem; display: none; white-space: pre-line; line-height: 1.6; }
+
+        /* Help accordion */
+        .help-accordion { margin-bottom: 1.5rem; }
+        .help-toggle {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            background: var(--bg2); border: 1px solid var(--border);
+            padding: 0.9rem 1.2rem; cursor: pointer;
+            font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 600;
+            color: var(--text); letter-spacing: 1px; transition: all 0.2s;
+        }
+        .help-toggle:hover { border-color: var(--border2); background: var(--bg3); }
+        .help-arrow { font-size: 0.7rem; transition: transform 0.3s; color: var(--text2); }
+        .help-arrow.open { transform: rotate(180deg); }
+
+        .help-content {
+            max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
+            background: var(--bg2); border: 1px solid var(--border); border-top: none;
+        }
+        .help-content.open { max-height: 600px; }
+        .help-content > * { padding: 0 1.2rem; }
+
+        .help-step {
+            display: flex; align-items: flex-start; gap: 1rem;
+            padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--border);
+            font-size: 0.82rem; line-height: 1.6; color: var(--text);
+        }
+        .help-step-num {
+            min-width: 28px; height: 28px; display: grid; place-items: center;
+            background: #e8000f18; border: 1px solid #e8000f33; color: var(--red);
+            font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 1px;
+        }
+        .help-step strong { color: #fff; }
+        .help-app { color: var(--green); font-family: var(--mono); font-size: 0.72rem; }
+
+        .help-url {
+            display: inline-block; background: var(--bg3); border: 1px solid var(--border2);
+            padding: 2px 8px; font-family: var(--mono); font-size: 0.75rem; color: var(--green);
+            margin: 4px 0;
+        }
+
+        .help-common-urls {
+            padding: 0.9rem 1.2rem; font-size: 0.8rem; color: var(--text); line-height: 1.8;
+        }
+        .help-common-urls strong { color: #fff; display: block; margin-bottom: 0.4rem; }
+        .help-url-list { font-family: var(--mono); font-size: 0.7rem; color: var(--text2); }
+        .help-url-list code { color: var(--green); }
+
+        /* Connecting animation */
+        .ip-connect-btn.connecting {
+            background: var(--bg3); color: var(--text2); pointer-events: none;
+            animation: pulse-connect 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-connect { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        footer { position: relative; z-index: 1; border-top: 1px solid var(--border); padding: 1.5rem 3rem; display: flex; align-items: center; justify-content: space-between; }
+        .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 4px; color: var(--text2); }
+        .footer-logo span { color: var(--red); }
+        .footer-text { font-family: var(--mono); font-size: 0.58rem; color: var(--text2); letter-spacing: 2px; }
+
+        @media (max-width: 600px) {
+            nav { padding: 0 1.2rem; }
+            .controls { flex-direction: column; }
+            .ip-row { flex-direction: column; }
+            footer { flex-direction: column; gap: 0.8rem; text-align: center; padding: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="{{ url_for('home') }}" class="nav-logo">
+        <div class="nav-icon"></div>
+        <div class="nav-logo-text">Weapon<span>Scan</span></div>
+    </a>
+    <div class="nav-links">
+        <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+        <a href="{{ url_for('detector') }}" class="nav-link">Upload</a>
+        <a href="{{ url_for('live') }}" class="nav-link active">Live</a>
+    </div>
+</nav>
+
+<div class="main">
+    <div class="page-tag">// REAL-TIME DETECTION MODULE</div>
+    <div class="page-title">LIVE <span>SCANNER</span></div>
+    <div class="page-sub">Real-time weapon detection from webcam or IP camera</div>
+
+    <!-- MODE SELECTOR -->
+    <div class="mode-selector">
+        <button class="mode-btn active" id="btnWebcam" onclick="switchMode('webcam')">📷 Webcam</button>
+        <button class="mode-btn" id="btnIP" onclick="switchMode('ip')">🌐 IP Camera</button>
+    </div>
+
+    <!-- ERROR BOX -->
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- ── WEBCAM PANEL ── -->
+    <div class="camera-panel show" id="webcamPanel">
+
+        <div class="video-wrap" id="videoWrap">
+            <div class="v-corner tl"></div>
+            <div class="v-corner tr"></div>
+            <div class="v-corner bl"></div>
+            <div class="v-corner br"></div>
+            <div class="scan-beam" id="scanBeam"></div>
+
+            <video id="webcamVideo" autoplay playsinline muted></video>
+            <canvas id="webcamCanvas"></canvas>
+
+            <div class="status-bar">
+                <div class="status-left">
+                    <div class="status-led" id="statusLed"></div>
+                    <div class="status-text" id="statusText">CAMERA OFF</div>
+                </div>
+                <div class="detect-count" id="detectCount">0 DETECTIONS</div>
+                <div class="status-fps" id="fpsDisplay">-- FPS</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="ctrl-btn btn-start" id="startBtn" onclick="startWebcam()">▶ Start Camera</button>
+            <button class="ctrl-btn btn-stop" id="stopBtn" onclick="stopCamera()" disabled>■ Stop</button>
+        </div>
+    </div>
+
+    <!-- ── IP CAMERA PANEL ── -->
+    <div class="camera-panel" id="ipPanel">
+
+        <div class="ip-input-wrap">
+            <div class="ip-label">// ENTER IP CAMERA STREAM URL</div>
+            <div class="ip-row">
+                <input class="ip-input" id="ipUrl" type="text"
+                    placeholder="e.g. http://192.168.1.100:8080/video">
+                <button class="ip-connect-btn" id="ipConnectBtn" onclick="startIPCamera()">Connect</button>
+            </div>
+            <div style="margin-top: 0.6rem; font-family: var(--mono); font-size: 0.6rem; color: var(--text2);">
+                TIP: Just enter http://&lt;phone-ip&gt;:&lt;port&gt; — we'll auto-detect the stream path
+            </div>
+        </div>
+
+        <!-- CONNECTION GUIDE -->
+        <div class="help-accordion" id="helpAccordion">
+            <button class="help-toggle" onclick="toggleHelp()">
+                <span>📱 How to connect your phone camera</span>
+                <span class="help-arrow" id="helpArrow">▼</span>
+            </button>
+            <div class="help-content" id="helpContent">
+                <div class="help-step">
+                    <div class="help-step-num">1</div>
+                    <div>
+                        <strong>Install an IP Camera app on your phone:</strong><br>
+                        <span class="help-app">Android →</span> "IP Webcam" by Pavel Khlebovich (Play Store)<br>
+                        <span class="help-app">iPhone →</span> "IPCamera Lite" or "Larix Broadcaster"
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">2</div>
+                    <div>
+                        <strong>Connect both devices to the SAME WiFi network</strong><br>
+                        Your phone and this computer must be on the exact same WiFi.
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">3</div>
+                    <div>
+                        <strong>Start the server in the app and copy the URL:</strong><br>
+                        The app will show something like:<br>
+                        <code class="help-url">http://192.168.1.100:8080</code><br>
+                        Paste that URL above — we'll handle the rest automatically.
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">4</div>
+                    <div>
+                        <strong>Quick test:</strong> Open the URL in your computer's browser first.<br>
+                        If you can see the camera feed in the browser, it will work here too.
+                    </div>
+                </div>
+                <div class="help-common-urls">
+                    <strong>Common stream URL formats:</strong>
+                    <div class="help-url-list">
+                        <code>http://&lt;IP&gt;:8080/video</code> — IP Webcam (Android) MJPEG stream<br>
+                        <code>http://&lt;IP&gt;:8080/shot.jpg</code> — IP Webcam (Android) snapshot<br>
+                        <code>rtsp://&lt;IP&gt;:8554/live</code> — RTSP streams (advanced)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="video-wrap" id="ipVideoWrap" style="display:none">
+            <div class="v-corner tl"></div>
+            <div class="v-corner tr"></div>
+            <div class="v-corner bl"></div>
+            <div class="v-corner br"></div>
+            <div class="scan-beam" id="ipScanBeam"></div>
+
+            <canvas id="ipCanvas" style="position:static; width:100%; height:auto;"></canvas>
+
+            <div class="status-bar">
+                <div class="status-left">
+                    <div class="status-led" id="ipStatusLed"></div>
+                    <div class="status-text" id="ipStatusText">CONNECTING...</div>
+                </div>
+                <div class="detect-count" id="ipDetectCount">0 DETECTIONS</div>
+                <div class="status-fps" id="ipFpsDisplay">-- FPS</div>
+            </div>
+        </div>
+
+        <div class="controls" id="ipControls" style="display:none">
+            <button class="ctrl-btn btn-stop" onclick="stopIPCamera()">■ Disconnect</button>
+        </div>
+    </div>
+
+    <!-- DETECTION LOG -->
+    <div class="det-log">
+        <div class="log-header">// DETECTION LOG</div>
+        <div id="logEntries"><div class="no-log">No detections yet — start camera to begin scanning</div></div>
+    </div>
+</div>
+
+<footer>
+    <div class="footer-logo">Weapon<span>Scan</span> AI</div>
+    <div class="footer-text">// LIVE DETECTION MODULE · REAL-TIME</div>
+</footer>
+
+<script>
+    let webcamStream = null;
+    let detectInterval = null;
+    let totalDetections = 0;
+    let frameCount = 0;
+    let lastFpsTime = Date.now();
+    let currentMode = 'webcam';
+    let ipInterval = null;
+
+    // ── MODE SWITCH ──
+    function switchMode(mode) {
+        currentMode = mode;
+        stopCamera();
+        document.getElementById('webcamPanel').classList.toggle('show', mode === 'webcam');
+        document.getElementById('ipPanel').classList.toggle('show', mode === 'ip');
+        document.getElementById('btnWebcam').classList.toggle('active', mode === 'webcam');
+        document.getElementById('btnIP').classList.toggle('active', mode === 'ip');
+        hideError();
+    }
+
+    // ── ERROR ──
+    function showError(msg) {
+        const b = document.getElementById('errorBox');
+        b.textContent = '⚠ ' + msg;
+        b.style.display = 'block';
+    }
+    function hideError() {
+        document.getElementById('errorBox').style.display = 'none';
+    }
+
+    // ── LOG ──
+    function addLog(label, conf) {
+        const container = document.getElementById('logEntries');
+        const noLog = container.querySelector('.no-log');
+        if (noLog) noLog.remove();
+
+        const now = new Date();
+        const time = now.toTimeString().slice(0, 8);
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `
+            <span class="log-time">${time}</span>
+            <span class="log-badge">${label.toUpperCase()}</span>
+            <span class="log-conf">conf: ${(conf * 100).toFixed(1)}%</span>
+        `;
+        container.insertBefore(entry, container.firstChild);
+
+        // Max 50 entries
+        while (container.children.length > 50) container.removeChild(container.lastChild);
+    }
+
+    // ── WEBCAM START ──
+    async function startWebcam() {
+        hideError();
+        try {
+            webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+            const video = document.getElementById('webcamVideo');
+            video.srcObject = webcamStream;
+
+            video.onloadedmetadata = () => {
+                const canvas = document.getElementById('webcamCanvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                setStatus('webcam', 'live', 'LIVE — SCANNING');
+                document.getElementById('scanBeam').classList.add('active');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+
+                // Send frames every 500ms for detection
+                detectInterval = setInterval(() => detectFrame(video, canvas, 'webcam'), 500);
+            };
+
+        } catch (err) {
+            showError('Camera access denied. Please allow camera permission in your browser and try again.');
+        }
+    }
+
+    // ── DETECT FRAME ──
+    async function detectFrame(video, canvas, mode) {
+        if (!video.videoWidth) return;
+
+        // Draw current video frame to temp canvas
+        const temp = document.createElement('canvas');
+        temp.width = video.videoWidth;
+        temp.height = video.videoHeight;
+        const tempCtx = temp.getContext('2d');
+        tempCtx.drawImage(video, 0, 0);
+
+        // Convert to blob and send to backend
+        temp.toBlob(async (blob) => {
+            try {
+                const formData = new FormData();
+                formData.append('file', blob, 'frame.jpg');
+
+                const res = await fetch('/detect_frame', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                // Draw on overlay canvas
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (data.detections && data.detections.length > 0) {
+                    setStatus(mode, 'detecting', `THREAT DETECTED — ${data.detections.length} WEAPON(S)`);
+
+                    data.detections.forEach(det => {
+                        const [x1, y1, x2, y2] = det.box;
+                        const label = det.label;
+                        const conf = det.conf;
+
+                        // Red box
+                        ctx.strokeStyle = '#e8000f';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                        // Corner marks
+                        const cs = 15;
+                        ctx.fillStyle = '#e8000f';
+                        [[x1, y1], [x2 - cs, y1], [x1, y2 - cs], [x2 - cs, y2 - cs]].forEach(([cx, cy]) => {
+                            ctx.fillRect(cx, cy, cs, 2);
+                            ctx.fillRect(cx, cy, 2, cs);
+                        });
+
+                        // Label background
+                        const labelText = `${label.toUpperCase()} ${(conf * 100).toFixed(0)}%`;
+                        ctx.font = 'bold 14px Courier New';
+                        const tw = ctx.measureText(labelText).width;
+                        ctx.fillStyle = '#e8000f';
+                        ctx.fillRect(x1, y1 - 22, tw + 12, 22);
+
+                        // Label text
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(labelText, x1 + 6, y1 - 6);
+
+                        totalDetections++;
+                        addLog(label, conf);
+                    });
+
+                    updateCount(mode, totalDetections);
+                } else {
+                    setStatus(mode, 'live', 'LIVE — SCANNING');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+
+                // FPS counter
+                frameCount++;
+                const now = Date.now();
+                if (now - lastFpsTime >= 1000) {
+                    const fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+                    document.getElementById(mode === 'webcam' ? 'fpsDisplay' : 'ipFpsDisplay').textContent = fps + ' FPS';
+                    frameCount = 0;
+                    lastFpsTime = now;
+                }
+
+            } catch (e) {
+                console.error('Detection error:', e);
+            }
+        }, 'image/jpeg', 0.85);
+    }
+
+    // ── HELP ACCORDION ──
+    function toggleHelp() {
+        document.getElementById('helpContent').classList.toggle('open');
+        document.getElementById('helpArrow').classList.toggle('open');
+    }
+
+    // ── IP CAMERA ──
+    let currentIpUrl = '';
+
+    function startIPCamera() {
+        const url = document.getElementById('ipUrl').value.trim();
+        if (!url) { showError('Please enter a valid IP camera URL.'); return; }
+        hideError();
+        currentIpUrl = url;
+
+        const connectBtn = document.getElementById('ipConnectBtn');
+        connectBtn.classList.add('connecting');
+        connectBtn.textContent = 'Connecting...';
+
+        document.getElementById('ipVideoWrap').style.display = 'block';
+        document.getElementById('ipControls').style.display = 'flex';
+        document.getElementById('ipScanBeam').classList.add('active');
+        setStatus('ip', 'live', 'CONNECTING...');
+
+        const canvas = document.getElementById('ipCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1280;
+        canvas.height = 720;
+
+        // Draw a "connecting" message
+        ctx.fillStyle = '#080c12';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#6b7585';
+        ctx.font = '20px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('Connecting to IP camera...', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('Auto-detecting stream URL...', canvas.width / 2, canvas.height / 2 + 30);
+
+        let firstFrameReceived = false;
+        let lastDetectionCount = -1;  // Track to avoid duplicate log spam
+
+        // Sequential polling: fire next request right after previous completes
+        async function pollFrame() {
+            if (!ipInterval) return;  // Stopped
+            try {
+                const res = await fetch('/detect_ip_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (!ipInterval) return;  // Stopped while waiting
+
+                const data = await res.json();
+
+                // 202 = still connecting, wait
+                if (res.status === 202) {
+                    setStatus('ip', 'live', 'CONNECTING...');
+                    setTimeout(pollFrame, 300);
+                    return;
+                }
+
+                if (!res.ok || data.error) {
+                    const errorMsg = data.error || 'Connection failed';
+                    showError(errorMsg);
+                    stopIPCamera();
+                    return;
+                }
+
+                // First successful frame
+                if (!firstFrameReceived) {
+                    firstFrameReceived = true;
+                    connectBtn.classList.remove('connecting');
+                    connectBtn.textContent = 'Connected ✓';
+                }
+
+                // Draw frame on canvas
+                if (data.frame) {
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.naturalWidth || 1280;
+                        canvas.height = img.naturalHeight || 720;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        // Draw detections
+                        if (data.detections && data.detections.length > 0) {
+                            setStatus('ip', 'detecting', `THREAT DETECTED — ${data.detections.length} WEAPON(S)`);
+                            data.detections.forEach(det => {
+                                const [x1, y1, x2, y2] = det.box;
+
+                                // Red box
+                                ctx.strokeStyle = '#e8000f';
+                                ctx.lineWidth = 3;
+                                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                                // Corner marks
+                                const cs = 15;
+                                ctx.fillStyle = '#e8000f';
+                                [[x1, y1], [x2 - cs, y1], [x1, y2 - cs], [x2 - cs, y2 - cs]].forEach(([cx, cy]) => {
+                                    ctx.fillRect(cx, cy, cs, 2);
+                                    ctx.fillRect(cx, cy, 2, cs);
+                                });
+
+                                const labelText = `${det.label.toUpperCase()} ${(det.conf * 100).toFixed(0)}%`;
+                                ctx.font = 'bold 14px Courier New';
+                                ctx.textAlign = 'left';
+                                const tw = ctx.measureText(labelText).width;
+                                ctx.fillStyle = '#e8000f';
+                                ctx.fillRect(x1, y1 - 22, tw + 12, 22);
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillText(labelText, x1 + 6, y1 - 6);
+                            });
+
+                            // Only log when detection count changes (avoid cache spam)
+                            if (data.detections.length !== lastDetectionCount) {
+                                lastDetectionCount = data.detections.length;
+                                totalDetections += data.detections.length;
+                                data.detections.forEach(det => addLog(det.label, det.conf));
+                                updateCount('ip', totalDetections);
+                            }
+                        } else {
+                            lastDetectionCount = 0;
+                            setStatus('ip', 'live', 'LIVE — SCANNING');
+                        }
+                    };
+                    img.src = 'data:image/jpeg;base64,' + data.frame;
+                }
+
+                frameCount++;
+                const now = Date.now();
+                if (now - lastFpsTime >= 1000) {
+                    document.getElementById('ipFpsDisplay').textContent = Math.round(frameCount * 1000 / (now - lastFpsTime)) + ' FPS';
+                    frameCount = 0;
+                    lastFpsTime = now;
+                }
+
+            } catch (e) {
+                console.error('IP cam error:', e);
+            }
+
+            // Schedule next poll immediately (sequential, not overlapping)
+            if (ipInterval) setTimeout(pollFrame, 50);
+        }
+
+        // Start polling
+        ipInterval = true;
+        pollFrame();
+    }
+
+    function stopIPCamera() {
+        if (ipInterval) { clearInterval(ipInterval); ipInterval = null; }
+
+        // Tell backend to stop the stream thread
+        if (currentIpUrl) {
+            fetch('/stop_ip_stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: currentIpUrl })
+            }).catch(() => {});
+            currentIpUrl = '';
+        }
+
+        document.getElementById('ipVideoWrap').style.display = 'none';
+        document.getElementById('ipControls').style.display = 'none';
+        document.getElementById('ipScanBeam').classList.remove('active');
+        setStatus('ip', '', 'DISCONNECTED');
+
+        const connectBtn = document.getElementById('ipConnectBtn');
+        connectBtn.classList.remove('connecting');
+        connectBtn.textContent = 'Connect';
+    }
+
+    // ── STOP ──
+    function stopCamera() {
+        if (detectInterval) { clearInterval(detectInterval); detectInterval = null; }
+        if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+        stopIPCamera();
+
+        const canvas = document.getElementById('webcamCanvas');
+        if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+
+        document.getElementById('scanBeam').classList.remove('active');
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+        setStatus('webcam', '', 'CAMERA OFF');
+    }
+
+    // ── HELPERS ──
+    function setStatus(mode, type, text) {
+        const ledId = mode === 'webcam' ? 'statusLed' : 'ipStatusLed';
+        const textId = mode === 'webcam' ? 'statusText' : 'ipStatusText';
+        const led = document.getElementById(ledId);
+        if (led) {
+            led.className = 'status-led' + (type === 'live' ? ' live' : type === 'detecting' ? ' detecting' : '');
+        }
+        const t = document.getElementById(textId);
+        if (t) t.textContent = text;
+    }
+
+    function updateCount(mode, count) {
+        const id = mode === 'webcam' ? 'detectCount' : 'ipDetectCount';
+        document.getElementById(id).textContent = count + ' DETECTION' + (count !== 1 ? 'S' : '');
+    }
+</script>
+
+</body>
+</html>

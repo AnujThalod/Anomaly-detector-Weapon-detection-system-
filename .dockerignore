@@ -1,36 +1,8 @@
-# Python
+
 __pycache__/
-*.py[cod]
-*$py.class
 *.pyc
 *.pyo
 *.pyd
-.Python
 venv/
-env/
-ENV/
-.venv
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Git
-.git/
-.gitignore
-
-# Local uploads/processed (will be recreated)
-static/uploads/*
-static/processed/*
-
-# Logs
-*.log
-
-# Environment
-.env
+static/uploads/
+static/processed/

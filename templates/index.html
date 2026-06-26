@@ -3,17 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Anomaly Detector</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>WeaponScan AI — Threat Detection System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red: #e8000f;
+            --red2: #ff2233;
+            --bg: #04060a;
+            --bg2: #080c12;
+            --bg3: #0c1018;
+            --border: #ffffff0d;
+            --border2: #ffffff18;
+            --text: #c8d0dc;
+            --text2: #6b7585;
+            --mono: 'Share Tech Mono', monospace;
+        }
+
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; overflow-x: hidden; }
+
+        .grid-bg {
+            position: fixed; inset: 0;
+            background-image: linear-gradient(#ffffff05 1px, transparent 1px), linear-gradient(90deg, #ffffff05 1px, transparent 1px);
+            background-size: 80px 80px;
+            animation: gridScroll 25s linear infinite;
+            z-index: 0;
+        }
+        @keyframes gridScroll {
+            0% { transform: perspective(800px) rotateX(8deg) translateY(0); }
+            100% { transform: perspective(800px) rotateX(8deg) translateY(80px); }
+        }
+
+        .glow-orb {
+            position: fixed; width: 700px; height: 700px; border-radius: 50%;
+            background: radial-gradient(circle, #e8000f14 0%, transparent 70%);
+            top: -200px; left: 50%; transform: translateX(-50%);
+            z-index: 0; animation: orbPulse 6s ease-in-out infinite;
+        }
+        @keyframes orbPulse {
+            0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.7; }
+            50% { transform: translateX(-50%) scale(1.2); opacity: 1; }
+        }
+
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 3rem; height: 64px;
+            border-bottom: 1px solid var(--border);
+            background: #04060acc; backdrop-filter: blur(20px);
+        }
+
+        .nav-logo { display: flex; align-items: center; gap: 12px; }
+
+        .nav-icon {
+            width: 30px; height: 30px; border: 1px solid var(--red);
+            display: grid; place-items: center;
+        }
+        .nav-icon::before {
+            content: ''; width: 10px; height: 10px;
+            background: var(--red);
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+        }
+
+        .nav-logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 5px; color: #fff; }
+        .nav-logo-text span { color: var(--red); }
+
+        .nav-right { display: flex; align-items: center; gap: 1.5rem; }
+        .nav-status { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 0.65rem; color: var(--text2); }
+        .status-led { width: 6px; height: 6px; border-radius: 50%; background: #00e676; box-shadow: 0 0 6px #00e676; animation: blink 2s ease-in-out infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        .nav-ver { font-family: var(--mono); font-size: 0.62rem; color: var(--text2); border: 1px solid var(--border2); padding: 3px 10px; }
+
+        .hero {
+            position: relative; z-index: 1;
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 100px 2rem 2rem; text-align: center;
+        }
+
+        .hero-tag {
+            font-family: var(--mono); font-size: 0.68rem; letter-spacing: 3px;
+            color: var(--red); background: #e8000f0e; border: 1px solid #e8000f22;
+            padding: 7px 18px; margin-bottom: 2.5rem;
+            animation: fadeUp 1s ease both;
+        }
+
+        .scanner-frame {
+            position: relative; padding: 2.5rem 3rem;
+            margin-bottom: 1.5rem; animation: fadeUp 1s 0.1s ease both;
+        }
+
+        .corner { position: absolute; width: 22px; height: 22px; }
+        .corner::before, .corner::after { content: ''; position: absolute; background: var(--red); }
+        .corner::before { width: 100%; height: 2px; top: 0; }
+        .corner::after { width: 2px; height: 100%; top: 0; }
+        .corner.tl { top: 0; left: 0; }
+        .corner.tr { top: 0; right: 0; transform: scaleX(-1); }
+        .corner.bl { bottom: 0; left: 0; transform: scaleY(-1); }
+        .corner.br { bottom: 0; right: 0; transform: scale(-1); }
+
+        .scan-beam {
+            position: absolute; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--red), transparent);
+            box-shadow: 0 0 8px var(--red);
+            animation: scanBeam 3s ease-in-out infinite;
+        }
+        @keyframes scanBeam {
+            0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; }
+        }
+
+        .hero-headline {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(5rem, 14vw, 10rem);
+            line-height: 0.88; letter-spacing: 3px; color: #fff;
+        }
+        .hero-headline .red { color: var(--red); text-shadow: 0 0 80px #e8000f55, 0 0 160px #e8000f22; }
+        .hero-headline .dim { color: transparent; -webkit-text-stroke: 1px #ffffff18; }
+
+        .hero-sub {
+            font-size: 0.95rem; font-weight: 300; letter-spacing: 2.5px;
+            color: var(--text2); max-width: 500px; line-height: 1.9;
+            margin: 2rem auto 0; animation: fadeUp 1s 0.2s ease both;
+        }
+
+        .cta-area {
+            display: flex; flex-direction: column; align-items: center; gap: 1rem;
+            margin-top: 3rem; animation: fadeUp 1s 0.3s ease both;
+        }
+
+        .btn-primary {
+            position: relative; display: inline-flex; align-items: center; gap: 14px;
+            padding: 1.1rem 3.5rem;
+            font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 5px;
+            color: #fff; background: var(--red); border: none; cursor: pointer;
+            text-decoration: none; overflow: hidden; transition: all 0.3s ease;
+        }
+        .btn-primary::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, #ffffff22, transparent);
+            transition: left 0.5s ease;
+        }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 20px 60px #e8000f44; }
+        .btn-primary:hover::before { left: 100%; }
+        .btn-arrow { transition: transform 0.3s ease; }
+        .btn-primary:hover .btn-arrow { transform: translateX(5px); }
+
+        .btn-hint { font-family: var(--mono); font-size: 0.62rem; color: var(--text2); letter-spacing: 2px; }
+
+        /* FEATURES */
+        .features-wrap { position: relative; z-index: 1; max-width: 860px; margin: 5rem auto 0; padding: 0 2rem; animation: fadeUp 1s 0.45s ease both; }
+        .features { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); }
+        .feat { padding: 2rem 1.8rem; border-right: 1px solid var(--border); position: relative; overflow: hidden; transition: background 0.3s; }
+        .feat:last-child { border-right: none; }
+        .feat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--red); transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease; }
+        .feat:hover { background: #ffffff03; }
+        .feat:hover::before { transform: scaleX(1); }
+        .feat-num { font-family: var(--mono); font-size: 0.58rem; color: var(--red); letter-spacing: 2px; margin-bottom: 1rem; }
+        .feat-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 3px; color: #fff; margin-bottom: 0.5rem; }
+        .feat-desc { font-size: 0.8rem; font-weight: 300; color: var(--text2); letter-spacing: 0.5px; line-height: 1.7; }
+
+        /* SECTION */
+        .section { position: relative; z-index: 1; max-width: 900px; margin: 7rem auto; padding: 0 2rem; }
+        .section-tag { font-family: var(--mono); font-size: 0.62rem; color: var(--text2); letter-spacing: 4px; margin-bottom: 0.5rem; }
+        .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; letter-spacing: 4px; color: #fff; margin-bottom: 2.5rem; }
+        .section-title span { color: var(--red); }
+
+        /* STEPS */
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); }
+        .step { background: var(--bg2); padding: 2.5rem 2rem; position: relative; overflow: hidden; transition: background 0.3s; }
+        .step:hover { background: var(--bg3); }
+        .step-ghost { font-family: 'Bebas Neue', sans-serif; font-size: 5rem; color: #ffffff04; line-height: 1; position: absolute; top: 0.5rem; right: 1rem; letter-spacing: 2px; }
+        .step-line { width: 30px; height: 2px; background: var(--red); margin-bottom: 1.5rem; }
+        .step-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 3px; color: #fff; margin-bottom: 0.6rem; }
+        .step-desc { font-size: 0.82rem; color: var(--text2); font-weight: 300; letter-spacing: 0.5px; line-height: 1.7; }
+
+        /* FORMATS */
+        .formats { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+        .fmt { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 2px; padding: 7px 16px; border: 1px solid var(--border2); color: var(--text2); transition: all 0.25s; cursor: default; }
+        .fmt:hover { border-color: var(--red); color: var(--red); background: #e8000f08; }
+        .fmt.img { border-color: #336bff33; color: #336bff99; }
+        .fmt.img:hover { border-color: #336bff; color: #336bff; background: #336bff0a; }
+
+        /* FOOTER */
+        footer { position: relative; z-index: 1; border-top: 1px solid var(--border); padding: 2rem 3rem; display: flex; align-items: center; justify-content: space-between; margin-top: 4rem; }
+        .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 4px; color: var(--text2); }
+        .footer-logo span { color: var(--red); }
+        .footer-text { font-family: var(--mono); font-size: 0.58rem; color: var(--text2); letter-spacing: 2px; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 700px) {
+            .features, .steps { grid-template-columns: 1fr; }
+            .feat { border-right: none; border-bottom: 1px solid var(--border); }
+            nav { padding: 0 1.2rem; }
+            .nav-ver { display: none; }
+            footer { flex-direction: column; gap: 1rem; text-align: center; padding: 1.5rem; }
+        }
+    </style>
 </head>
-<body class="home">
-    <div class="container">
-        <h1>Welcome to the Anomaly Detector</h1>
-        <p>Detect anomalies in images instantly with AI.</p>
-        <a href="{{ url_for('detector') }}">
-            <button class="start-btn">Get Started</button>
-        </a>
-        
+<body>
+
+<div class="grid-bg"></div>
+<div class="glow-orb"></div>
+
+<nav>
+    <div class="nav-logo">
+        <div class="nav-icon"></div>
+        <div class="nav-logo-text">Weapon<span>Scan</span></div>
     </div>
+    <div class="nav-right">
+        <div class="nav-status"><div class="status-led"></div>SYS_ONLINE</div>
+        <div class="nav-ver">v2.1.0</div>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-tag">// NEURAL THREAT DETECTION SYSTEM ACTIVE</div>
+
+    <div class="scanner-frame">
+        <div class="corner tl"></div><div class="corner tr"></div>
+        <div class="corner bl"></div><div class="corner br"></div>
+        <div class="scan-beam"></div>
+        <h1 class="hero-headline">
+            <span class="dim">DETECT</span><br>
+            <span class="red">WEAPON</span><br>
+            <span class="dim">THREAT</span>
+        </h1>
+    </div>
+
+    <p class="hero-sub">Advanced AI-powered weapon detection system. Upload any image or video — our neural network scans and identifies threats in real-time.</p>
+
+    <div class="cta-area">
+    <a href="{{ url_for('detector') }}" class="btn-primary">
+        Launch Scanner <span class="btn-arrow">→</span>
+    </a>
+    <a href="{{ url_for('live') }}" class="btn-primary" style="background:transparent; border:1px solid #e8000f; box-shadow:none;">
+        🎥 Live Scanner <span class="btn-arrow">→</span>
+    </a>
+    <div class="btn-hint">// SUPPORTS IMAGE, VIDEO & LIVE CAMERA</div>
+</div>
+</section>
+
+<div class="features-wrap">
+    <div class="features">
+        <div class="feat">
+            <div class="feat-num">01 // DETECTION</div>
+            <div class="feat-title">Real-Time AI</div>
+            <div class="feat-desc">Neural network scans every frame for weapon detection with high precision.</div>
+        </div>
+        <div class="feat">
+            <div class="feat-num">02 // FORMATS</div>
+            <div class="feat-title">Multi-Format</div>
+            <div class="feat-desc">Supports JPG, PNG images and MP4, AVI, MOV video formats seamlessly.</div>
+        </div>
+        <div class="feat">
+            <div class="feat-num">03 // OUTPUT</div>
+            <div class="feat-title">Instant Export</div>
+            <div class="feat-desc">Download processed media with detection boxes drawn automatically.</div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-tag">// PROCESS</div>
+    <div class="section-title">HOW IT <span>WORKS</span></div>
+    <div class="steps">
+        <div class="step">
+            <div class="step-ghost">01</div>
+            <div class="step-line"></div>
+            <div class="step-title">Upload File</div>
+            <div class="step-desc">Select or drag & drop any image or video file from your device into the scanner.</div>
+        </div>
+        <div class="step">
+            <div class="step-ghost">02</div>
+            <div class="step-line"></div>
+            <div class="step-title">AI Scans</div>
+            <div class="step-desc">Our trained YOLO model analyzes every frame for weapon anomalies automatically.</div>
+        </div>
+        <div class="step">
+            <div class="step-ghost">03</div>
+            <div class="step-line"></div>
+            <div class="step-title">Get Results</div>
+            <div class="step-desc">View processed output with detection boxes highlighted. Download instantly.</div>
+        </div>
+    </div>
+</div>
+
+<div class="section" style="margin-top:0">
+    <div class="section-tag">// COMPATIBILITY</div>
+    <div class="section-title">SUPPORTED <span>FORMATS</span></div>
+    <div class="formats">
+        <div class="fmt img">JPG</div>
+        <div class="fmt img">PNG</div>
+        <div class="fmt img">JPEG</div>
+        <div class="fmt">MP4</div>
+        <div class="fmt">AVI</div>
+        <div class="fmt">MOV</div>
+        <div class="fmt">MKV</div>
+        <div class="fmt">WEBM</div>
+    </div>
+</div>
+<!-- TEAM SECTION -->
+<div class="section" style="margin-top: 0;">
+    <div class="section-tag">// UNIT OPERATORS</div>
+    <div class="section-title">MEET THE <span>TEAM</span></div>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem;">
+
+        <!-- VIJAY -->
+        <div style="background: #080c12; border: 1px solid #ffffff0d; padding: 2rem; text-align: center; position: relative;">
+            <div style="width: 80px; height: 80px; border: 2px solid #e8000f; margin: 0 auto 1rem; display: grid; place-items: center;">
+                <span style="font-family: 'Bebas Neue'; font-size: 2rem; color: #e8000f;">V</span>
+            </div>
+            <div style="font-family: 'Share Tech Mono'; font-size: 0.6rem; color: #e8000f; letter-spacing: 3px; margin-bottom: 0.4rem;">// OPERATOR_01</div>
+            <div style="font-family: 'Bebas Neue'; font-size: 1.8rem; letter-spacing: 4px; color: #fff;">VIJAY</div>
+            <div style="font-family: 'Share Tech Mono'; font-size: 0.6rem; color: #6b7585; letter-spacing: 2px;">WeaponScan AI · Developer</div>
+        </div>
+
+        <!-- VANSH -->
+        <div style="background: #080c12; border: 1px solid #ffffff0d; padding: 2rem; text-align: center; position: relative;">
+            <div style="width: 80px; height: 80px; border: 2px solid #e8000f; margin: 0 auto 1rem; display: grid; place-items: center;">
+                <span style="font-family: 'Bebas Neue'; font-size: 2rem; color: #e8000f;">V</span>
+            </div>
+            <div style="font-family: 'Share Tech Mono'; font-size: 0.6rem; color: #e8000f; letter-spacing: 3px; margin-bottom: 0.4rem;">// OPERATOR_02</div>
+            <div style="font-family: 'Bebas Neue'; font-size: 1.8rem; letter-spacing: 4px; color: #fff;">VANSH</div>
+            <div style="font-family: 'Share Tech Mono'; font-size: 0.6rem; color: #6b7585; letter-spacing: 2px;">WeaponScan AI · Developer</div>
+        </div>
+
+    </div>
+</div>
+<footer>
+    <div class="footer-logo">Weapon<span>Scan</span> AI</div>
+    <div class="footer-text">// AI-POWERED THREAT DETECTION &nbsp;·&nbsp; BUILT WITH YOLO</div>
+</footer>
+
 </body>
 </html>
